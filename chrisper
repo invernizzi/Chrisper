@@ -152,6 +152,24 @@ class Paper(object):
         self.clean_fulltext = r"``flower'', should be ``flower,''"
         assert self.check_commas_after_quotes() == 1
 
+    ##########################################################################
+
+    def check_always_capitalize(self):
+        errors = 0
+
+        for reg in ["internet"]:
+            for m in re.finditer(reg,
+                                 self.clean_fulltext,
+                                 re.MULTILINE):
+                print "Always capitalize:", \
+                                    self._format_re_match(m, self.clean_fulltext)
+                errors += 1
+        return errors
+
+    def test__check_always_capitalize(self):
+        self.clean_fulltext = r"internet"
+        assert self.check_always_capitalize() == 1
+
 if __name__ == '__main__':
     if sys.argv[1] == "test":
         Paper(sys.argv[2:]).run_all_tests()
