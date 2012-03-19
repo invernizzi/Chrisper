@@ -39,9 +39,13 @@ class Paper(object):
         self.__run_all_with_prefix('test_')
 
     def _format_re_match(self, m, text):
-            a_string = text[m.start():
-                            min([m.end() + 10, len(text)])]
-            return a_string.split('\n', 1)[0]
+        start_of_sentence = max(text.rfind('\n', 0, m.start()) + 1, 0)
+        end_of_sentence = text.find('\n', m.end()), len(text)
+        if end_of_sentence == -1:
+            end_of_sentence = len(text)
+        a_string = text[max(start_of_sentence, m.start() - 10):
+                        min(end_of_sentence, m.end() + 10)]
+        return a_string.split('\n', 1)[0]
 
     ##########################################################################
     # CHECKS
