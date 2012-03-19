@@ -77,7 +77,7 @@ class Paper(object):
             errors += 1
         return errors
 
-    def test__check_exempli_gratia(self):
+    def test__check_id_est_without_comma(self):
         self.clean_fulltext = "i.e. a pony \n i.e. what?, i.e., cool!"
         assert self.check_id_est_without_comma() == 2
 
