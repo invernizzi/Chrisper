@@ -121,20 +121,29 @@ class Paper(object):
 
     def check_commas_in_numbers(self):
         errors = 0
-        for m in re.finditer('[0-9][0-9]{3}',
+        for m in re.finditer('(^|[^\w\-])\d{5}',
                              self.clean_fulltext,
                              re.MULTILINE):
-            if 1960 < int(m.group()) < 2020:  # Millennium bug!
-                # It's probably a date. We skip it.
-                continue
-            print 'Put commas in numbers over 1,000:', \
+            print 'Put commas in numbers over 10,000:', \
+                                self._format_re_match(m, self.clean_fulltext)
+            errors += 1
+        for m in re.finditer('[^\d]\d,\d{3}[^,]',
+                             self.clean_fulltext,
+                             re.MULTILINE):
+            print "Don't put commas in numbers under 10,000:", \
                                 self._format_re_match(m, self.clean_fulltext)
             errors += 1
         return errors
 
     def test__check_commas_in_numbers(self):
-        self.clean_fulltext = r'A 1000 cats eat a 1,000 mice'
+        self.clean_fulltext = r'10000 cats eat 10,000 mice'
         assert self.check_commas_in_numbers() == 1
+        self.clean_fulltext = r'9999 cats eat 9,999 mice'
+        assert self.check_commas_in_numbers() == 1
+        self.clean_fulltext = r'1000 cats eat 999,999 mice'
+        assert self.check_commas_in_numbers() == 0
+        self.clean_fulltext = r'project N10000, grant CNS-20000'
+        assert self.check_commas_in_numbers() == 0
 
     ##########################################################################
 
@@ -162,13 +171,56 @@ class Paper(object):
                                  self.clean_fulltext,
                                  re.MULTILINE):
                 print "Always capitalize:", \
-                                    self._format_re_match(m, self.clean_fulltext)
+                            self._format_re_match(m, self.clean_fulltext)
                 errors += 1
         return errors
 
     def test__check_always_capitalize(self):
         self.clean_fulltext = r"internet"
         assert self.check_always_capitalize() == 1
+
+    ##########################################################################
+
+    def check_comma_before_that(self):
+        errors = 0
+        for m in re.finditer(",\s+that",
+                             self.clean_fulltext,
+                             re.MULTILINE):
+            print "Do not put a comma before 'that':", \
+                                self._format_re_match(m, self.clean_fulltext)
+            errors += 1
+        return errors
+
+    def test__check_comma_before_that(self):
+        self.clean_fulltext = r"I like cats, that eat mice"
+        assert self.check_comma_before_that() == 1
+        self.clean_fulltext = r"I like cats that eat mice"
+        assert self.check_comma_before_that() == 0
+
+    ##########################################################################
+
+    def check_comma_before_which(self):
+        errors = 0
+        for m in re.finditer("[^,\s]\s+which",
+                             self.clean_fulltext,
+                             re.MULTILINE):
+            word_before_start = self.clean_fulltext.rfind(' ', 0, m.start())
+            word_before = re.search("\w+", self.clean_fulltext[
+                                                word_before_start + 1:
+                                                m.start() + 1]).group()
+            if word_before in ["in", "for", "of", "before", "after", "from",
+                               "through"]:
+                continue
+            print "Put a comma before 'which':", \
+                                self._format_re_match(m, self.clean_fulltext)
+            errors += 1
+        return errors
+
+    def test__check_comma_before_which(self):
+        self.clean_fulltext = r"I like that cat, which eat mice"
+        assert self.check_comma_before_which() == 0
+        self.clean_fulltext = r"I like that cat which eat mice"
+        assert self.check_comma_before_which() == 1
 
 if __name__ == '__main__':
     if sys.argv[1] == "test":
