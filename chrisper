@@ -132,6 +132,21 @@ class Paper(object):
         self.clean_fulltext = r'A 1000 cats eat a 1,000 mice'
         assert self.check_commas_in_numbers() == 1
 
+    ##########################################################################
+
+    def check_commas_after_quotes(self):
+        errors = 0
+        for m in re.finditer("''\s*,",
+                             self.clean_fulltext,
+                             re.MULTILINE):
+            print "Convert ``hello'', => ``hello,'' :", \
+                                self._format_re_match(m, self.clean_fulltext)
+            errors += 1
+        return errors
+
+    def test__check_commas_after_quotes(self):
+        self.clean_fulltext = r"``flower'', should be ``flower,''"
+        assert self.check_commas_after_quotes() == 1
 
 if __name__ == '__main__':
     if sys.argv[1] == "test":
