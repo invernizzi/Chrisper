@@ -1,0 +1,140 @@
+#!/usr/bin/env python
+
+import subprocess
+import sys
+import re
+import inspect
+
+
+class Paper(object):
+
+    ##########################################################################
+    # INTERNAL STUFF
+    ##########################################################################
+
+    def __init__(self, filenames):
+        clean_fulltext = subprocess.check_output(["detex"] + filenames)
+        fulltext = ''
+        for filename in filenames:
+            with open(filename) as f:
+                fulltext += f.read() + '\n'
+
+        flatten_paragraphs = lambda text: '\n'.join(
+                        paragraph.replace('\n', ' ')
+                        for paragraph in re.split("\n(\s*\n)+", text)
+                        if paragraph.strip())
+        self.fulltext = flatten_paragraphs(fulltext)
+        self.clean_fulltext = flatten_paragraphs(clean_fulltext)
+
+    def __run_all_with_prefix(self, prefix):
+        for name in filter(lambda n: n.startswith(prefix), dir(self)):
+            attribute = getattr(self, name)
+            if inspect.ismethod(attribute):
+                attribute()
+
+    def run_all_checks(self):
+        self.__run_all_with_prefix('check_')
+
+    def run_all_tests(self):
+        self.__run_all_with_prefix('test_')
+
+    def _format_re_match(self, m, text):
+            a_string = text[m.start():
+                            min([m.end() + 10, len(text)])]
+            return a_string.split('\n', 1)[0]
+
+    ##########################################################################
+    # CHECKS
+    ##########################################################################
+
+    def check_exempli_gratia_without_comma(self):
+        errors = 0
+        for m in re.finditer(r'e\.g\.[^,]',
+                             self.clean_fulltext,
+                             re.MULTILINE):
+            print "E.G. without comma:", self._format_re_match(m,
+                                            self.clean_fulltext)
+            errors += 1
+        return errors
+
+    def test__check_exempli_gratia_without_comma(self):
+        self.clean_fulltext = "e.g. a pony \n e.g. what?, e.g., cool!"
+        assert self.check_exempli_gratia_without_comma() == 2
+
+    ##########################################################################
+
+    def check_id_est_without_comma(self):
+        errors = 0
+        for m in re.finditer(r'i\.e\.[^,]',
+                             self.clean_fulltext,
+                             re.MULTILINE):
+            print "I.E. without comma:", self._format_re_match(m,
+                                            self.clean_fulltext)
+            errors += 1
+        return errors
+
+    def test__check_exempli_gratia(self):
+        self.clean_fulltext = "i.e. a pony \n i.e. what?, i.e., cool!"
+        assert self.check_id_est_without_comma() == 2
+
+    ##########################################################################
+
+    def check_quotes(self):
+        errors = 0
+        for m in re.finditer(r'"',
+                             self.clean_fulltext,
+                             re.MULTILINE):
+            print '"hello" should be substituted with ``hello\'\':', \
+                                self._format_re_match(m, self.clean_fulltext)
+            errors += 1
+        return errors
+
+    def test__check_quotes(self):
+        self.clean_fulltext = '"this is not ok" ``but this is\'\''
+        assert self.check_quotes() == 2
+
+    ##########################################################################
+
+    def check_citing_with_unbreakeable_spaces(self):
+        errors = 0
+        for keyword in ["cite", "ref"]:
+            for m in re.finditer(r'(^|\s)\\' + keyword + r'\s*{',
+                                 self.clean_fulltext,
+                                 re.MULTILINE):
+                print 'use hello~\%s{ instead of hello \%s{:' % (keyword,
+                                                                 keyword), \
+                            self._format_re_match(m, self.clean_fulltext)
+                errors += 1
+        return errors
+
+    def test__check_citing_with_unbreakeable_spaces(self):
+        self.clean_fulltext = r'citing: wrong \cite{ciao} - right~\cite{ciao}'
+        assert self.check_citing_with_unbreakeable_spaces() == 1
+        self.clean_fulltext = r'refs done wrong \ref{ciao} - right~\ref{ciao}'
+        assert self.check_citing_with_unbreakeable_spaces() == 1
+
+    ##########################################################################
+
+    def check_commas_in_numbers(self):
+        errors = 0
+        for m in re.finditer('[0-9][0-9]{3}',
+                             self.clean_fulltext,
+                             re.MULTILINE):
+            if 1960 < int(m.group()) < 2020:  # Millennium bug!
+                # It's probably a date. We skip it.
+                continue
+            print 'Put commas in numbers over 1,000:', \
+                                self._format_re_match(m, self.clean_fulltext)
+            errors += 1
+        return errors
+
+    def test__check_commas_in_numbers(self):
+        self.clean_fulltext = r'A 1000 cats eat a 1,000 mice'
+        assert self.check_commas_in_numbers() == 1
+
+
+if __name__ == '__main__':
+    if sys.argv[1] == "test":
+        Paper(sys.argv[2:]).run_all_tests()
+    else:
+        Paper(sys.argv[1:]).run_all_checks()
