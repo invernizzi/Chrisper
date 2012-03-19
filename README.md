@@ -21,3 +21,9 @@ Contributing
 ------------
 
 You're more than welcome :)
+
+Related Work
+-----------
+* [some shell scripts](http://matt.might.net/articles/shell-scripts-for-passive-voice-weasel-words-duplicates/)
+* [WDS](https://github.com/utapyngo/WritingSmellDetector)
+* [stile-check.rb](http://www.cs.umd.edu/~nspring/software/style-check-readme.html)
