@@ -232,7 +232,7 @@ class Paper(object):
                              "lustre": "luster", "modelled": "modeled", "revelled": "raveled", "shovelled": "shoveled", "snivelled": "sniveled", 
                              "theatre": "theater", "towards": "toward", "travelling": "traveling", "yodelling": "yodeling"}
         for british, american in british_spellings.iteritems():
-            for m in re.finditer("(\s+|\()" + british + "(\s+|\.|,|\))", self.clean_fulltext):
+            for m in re.finditer("[^\w]+" + british + "[^\w]+", self.clean_fulltext):
                 print "Don't spell like a bugger", american, "not", self._format_re_match(m, self.clean_fulltext)
                 errors += 1
         return errors
