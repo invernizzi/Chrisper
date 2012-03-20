@@ -222,6 +222,31 @@ class Paper(object):
         self.clean_fulltext = r"I like that cat which eat mice"
         assert self.check_comma_before_which() == 1
 
+    ##########################################################################
+        
+    def check_british_spelling(self):
+        errors = 0
+        british_spellings = {"acknowledgement": "acknowledgment", "afterwards": "afterward", "arse": "ass", "backwards": "backward", "besides": "beside", 
+                             "cancelling": "canceling", "catalogue": "catalog", "centre": "center", "cheque": "check", "colour": "color", "dialogue": "dialog",
+                             "favour": "favor", "flavour": "flavor", "forwards": "forward", "grey": "gray", "judgement": "judgment", "labour": "labor",
+                             "lustre": "luster", "modelled": "modeled", "revelled": "raveled", "shovelled": "shoveled", "snivelled": "sniveled", 
+                             "theatre": "theater", "towards": "toward", "travelling": "traveling", "yodelling": "yodeling"}
+        for british, american in british_spellings.iteritems():
+            for m in re.finditer("[^\w]+" + british + "[^\w]+", self.clean_fulltext):
+                print "Don't spell like a bugger", american, "not", self._format_re_match(m, self.clean_fulltext)
+                errors += 1
+        return errors
+
+    def test__check_british_spelling(self):
+        self.clean_fulltext = r"Go to the (centre) of town to pick up the best flavour colour."
+        assert self.check_british_spelling() == 3
+        self.clean_fulltext = r"I am an American, therefore I am"
+        assert self.check_british_spelling() == 0
+        self.clean_fulltext = r"This cheque, right here, is unacceptable. I'll have to cheque with my manager."
+        assert self.check_british_spelling() == 2
+        self.clean_fulltext = r"It is hard to parse this sentence."
+        assert self.check_british_spelling() == 0
+
 if __name__ == '__main__':
     if sys.argv[1] == "test":
         Paper(sys.argv[2:]).run_all_tests()
