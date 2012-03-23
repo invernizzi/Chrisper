@@ -1,6 +1,11 @@
 Chrisper: Chris-proof your papers
 =================================
 
+Chrisper is a small utility that checks for common mistakes in the latex source of Computer Science papers.
+
+The reference that we follow is [Bugs in Writing](http://www.amazon.com/BUGS-Writing-Revised-Guide-Debugging/dp/020137921X).
+
+
 Install
 -------
 
