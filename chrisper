@@ -247,6 +247,27 @@ class Paper(object):
         self.clean_fulltext = r"It is hard to parse this sentence."
         assert self.check_british_spelling() == 0
 
+    ##########################################################################
+
+    def check_is_comprised_of(self):
+        errors = 0
+        for m in re.finditer("([^\w]+|^)is[\s]+comprised[\s]+of[^\w]+", self.clean_fulltext, flags=re.IGNORECASE):
+            print "Don't use 'is comprised of'. Bugs book segment 75.", self._format_re_match(m, self.clean_fulltext)
+            errors += 1
+        return errors
+
+    def test__check_is_comprised_of(self):
+        self.clean_fulltext = r"Adam is comprised of a brain and a stomach."
+        assert self.check_is_comprised_of() == 1
+        self.clean_fulltext = r"Adam comprises a brain and a stomach."
+        assert self.check_is_comprised_of() == 0
+        self.clean_fulltext = r"You don't know what that is. Comprised. Of."
+        assert self.check_is_comprised_of() == 0
+        self.clean_fulltext = r"Is comprised of blah and bloop."
+        assert self.check_is_comprised_of() == 1
+        self.clean_fulltext = r"Adam is awesome. Is comprised of blah and bloop."
+        assert self.check_is_comprised_of() == 1
+
 if __name__ == '__main__':
     if sys.argv[1] == "test":
         Paper(sys.argv[2:]).run_all_tests()
