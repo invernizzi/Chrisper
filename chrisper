@@ -166,7 +166,7 @@ class Paper(object):
     def check_always_capitalize(self):
         errors = 0
 
-        for reg in ["internet"]:
+        for reg in ["internet", "javascript"]:
             for m in re.finditer(reg,
                                  self.clean_fulltext,
                                  re.MULTILINE):
@@ -209,7 +209,7 @@ class Paper(object):
                                                 word_before_start + 1:
                                                 m.start() + 1]).group()
             if word_before in ["in", "for", "of", "before", "after", "from",
-                               "through"]:
+                               "through", "to", "at"]:
                 continue
             print "Put a comma before 'which':", \
                                 self._format_re_match(m, self.clean_fulltext)
