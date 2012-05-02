@@ -101,6 +101,7 @@ class Paper(object):
             return self.__text[ignored_environments]
         except:
             text = subprocess.check_output(["detex",
+                                            "-n",
                                             "-e",
                                              ','.join(ignored_environments)]
                                              + self.__filenames)
@@ -344,9 +345,7 @@ class Paper(object):
 if __name__ == '__main__':
     if len(sys.argv) < 2:
         print """Usage:
- - chrisper paper.tex [additional_files.tex] 
-      Analyzes the tex files listed, and any file
-      included from them via Latex commands (e.g.,\input)
+ - chrisper *.tex
 
  - chrisper test
       Runs the test suite.

@@ -20,7 +20,7 @@ the root path of you awesome paper.
 Usage
 -----
  
-    chrisper main.tex
+    chrisper *.tex
 
 Contributing
 ------------
