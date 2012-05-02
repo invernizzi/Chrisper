@@ -5,6 +5,21 @@ import sys
 import re
 import inspect
 
+# List of all english prepositions
+PREPOSITIONS = ["a", "abaft", "aboard", "about", "above", "absent",
+    "across", "afore", "after", "against", "along", "alongside", "amid",
+    "amidst", "among", "amongst", "an", "apropos", "around", "as", "aside",
+    "astride", "at", "athwart", "atop", "barring", "before", "behind", "below",
+    "beneath", "beside", "besides", "between", "betwixt", "beyond", "but", "by",
+    "circa", "concerning", "despite", "down", "during", "except", "excluding",
+    "failing", "following", "for", "from", "given", "in", "including", "inside",
+    "into", "lest", "like", "mid", "midst", "minus", "modulo", "near", "next",
+    "notwithstanding", "of", "off", "on", "onto", "opposite", "out", "outside",
+    "over", "pace", "past", "per", "plus", "pro", "qua", "regarding", "round",
+    "sans", "save", "since", "than", "through,", "throughout,", "till", "times",
+    "to", "toward", "towards", "under", "underneath", "unlike", "until", "unto",
+    "up", "upon", "versus", "via", "vice", "with", "within", "without", "worth"]
+
 
 class Paper(object):
 
@@ -86,7 +101,7 @@ class Paper(object):
         except:
             text = subprocess.check_output(["detex",
                                             "-e",
-                                             ignored_environments]
+                                             ','.join(ignored_environments)]
                                              + self.__filenames)
             self.__text[ignored_environments] = self.__flatten_paragraphs(
                                                                         text)
@@ -175,28 +190,29 @@ class Paper(object):
 
     def check_commas_in_numbers(self):
         errors = 0
-        for m in re.finditer('(^|[^\w\-])\d{5}',
-                             self.get_text(),
-                             re.MULTILINE):
+        # We also check in tables
+        text = self.get_text(ignored_environments=tuple(
+                set(Paper._IGNORED_ENVIRONMENTS) - set('table')))
+        for m in re.finditer('(^|[^\w\-])\d{5}', text, re.MULTILINE):
             print 'Put commas in numbers over 10,000:', \
                                 self.format_re_match(m, self.get_text())
             errors += 1
-        for m in re.finditer('[^\d]\d,\d{3}[^,]',
-                             self.get_text(),
-                             re.MULTILINE):
+        for m in re.finditer('[^\d]\d,\d{3}[^,]', text, re.MULTILINE):
             print "Don't put commas in numbers under 10,000:", \
                                 self.format_re_match(m, self.get_text())
             errors += 1
         return errors
 
     def test__check_commas_in_numbers(self):
-        self.get_text = lambda: r'10000 cats eat 10,000 mice'
+        def get_text(*args, **kwargs): return text
+        self.get_text = get_text
+        text = r'10000 cats eat 10,000 mice'
         assert self.check_commas_in_numbers() == 1
-        self.get_text = lambda: r'9999 cats eat 9,999 mice'
+        text = r'9999 cats eat 9,999 mice'
         assert self.check_commas_in_numbers() == 1
-        self.get_text = lambda: r'1000 cats eat 999,999 mice'
+        text = r'1000 cats eat 999,999 mice'
         assert self.check_commas_in_numbers() == 0
-        self.get_text = lambda: r'project N10000, grant CNS-20000'
+        text = r'project N10000, grant CNS-20000'
         assert self.check_commas_in_numbers() == 0
 
     ##########################################################################
@@ -262,8 +278,9 @@ class Paper(object):
             word_before = re.search("\w+", self.get_text()[
                                                 word_before_start + 1:
                                                 m.start() + 1]).group()
-            if word_before in ["in", "for", "of", "before", "after", "from",
-                               "through", "to", "at"]:
+            if word_before in PREPOSITIONS:
+                continue
+            if word_before.endswith('ing'):
                 continue
             print "Put a comma before 'which':", \
                                 self.format_re_match(m, self.get_text())
