@@ -8,12 +8,18 @@ import inspect
 
 class Paper(object):
 
+    _IGNORED_ENVIRONMENTS = ("array,eqnarray,equation,figure,"
+                             "mathmatica,picture,table,verbatim,lstlisting")
+
     ##########################################################################
     # INTERNAL STUFF
     ##########################################################################
 
     def __init__(self, filenames):
-        clean_fulltext = subprocess.check_output(["detex"] + filenames)
+        clean_fulltext = subprocess.check_output(["detex",
+                                                  "-e",
+                                                  Paper._IGNORED_ENVIRONMENTS]
+                                                  + filenames)
         fulltext = ''
         for filename in filenames:
             with open(filename) as f:
