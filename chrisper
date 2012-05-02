@@ -8,9 +8,6 @@ import inspect
 
 class Paper(object):
 
-    _IGNORED_ENVIRONMENTS = ("array,eqnarray,equation,figure,"
-                             "mathmatica,picture,table,verbatim,lstlisting")
-
     ##########################################################################
     # INTERNAL STUFF  (you can ignore these functions)
     ##########################################################################
@@ -67,6 +64,16 @@ class Paper(object):
             self.__latex_text = self.__flatten_paragraphs(text)
             return self.__latex_text
 
+    _IGNORED_ENVIRONMENTS = ("array",
+                             "eqnarray",
+                             "equation",
+                             "figure",
+                             "mathmatica",
+                             "picture",
+                             "table",
+                             "verbatim",
+                             "lstlisting")
+
     def get_text(self, ignored_environments=None):
         ''' Returns the textual content of the tex files, latex/tex commands
             stripped. You can control what enviroments to strip via the
@@ -93,7 +100,6 @@ class Paper(object):
         a_string = text[max(start_of_sentence, m.start() - 10):
                         min(end_of_sentence, m.end() + 10)]
         return a_string.split('\n', 1)[0]
-
 
     ##########################################################################
     # CHECKS
@@ -271,10 +277,10 @@ class Paper(object):
         assert self.check_comma_before_which() == 1
 
     ##########################################################################
-        
+
     def check_british_spelling(self):
         errors = 0
-        british_spellings = {"acknowledgement": "acknowledgment", "afterwards": "afterward", "arse": "ass", "backwards": "backward", "besides": "beside", 
+        british_spellings = {"acknowledgement": "acknowledgment", "afterwards": "afterward", "arse": "ass", "backwards": "backward", "besides": "beside",
                              "cancelling": "canceling", "catalogue": "catalog", "centre": "center", "cheque": "check", "colour": "color", "dialogue": "dialog",
                              "favour": "favor", "flavour": "flavor", "forwards": "forward", "grey": "gray", "judgement": "judgment", "labour": "labor",
                              "lustre": "luster", "modelled": "modeled", "revelled": "raveled", "shovelled": "shoveled", "snivelled": "sniveled", 
