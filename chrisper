@@ -12,25 +12,31 @@ class Paper(object):
                              "mathmatica,picture,table,verbatim,lstlisting")
 
     ##########################################################################
-    # INTERNAL STUFF
+    # INTERNAL STUFF  (you can ignore these functions)
     ##########################################################################
 
     def __init__(self, filenames):
-        clean_fulltext = subprocess.check_output(["detex",
-                                                  "-e",
-                                                  Paper._IGNORED_ENVIRONMENTS]
-                                                  + filenames)
-        fulltext = ''
-        for filename in filenames:
-            with open(filename) as f:
-                fulltext += f.read() + '\n'
+        self.__filenames = filenames
+        self.__text = {}
 
-        flatten_paragraphs = lambda text: '\n'.join(
-                        paragraph.replace('\n', ' ')
+    @staticmethod
+    def __flatten_paragraphs(text):
+        '''Given a text where paragraphs are separated by one or more
+           empty lines, it puts every paragraph in a single, separate line.
+           Example:
+
+           I like sushi
+           and pie.
+
+           I ride
+           horses.
+
+           Becomes:
+           I like sushi and pie.
+           I ride horses '''
+        return '\n'.join(paragraph.replace('\n', ' ')
                         for paragraph in re.split("\n(\s*\n)+", text)
                         if paragraph.strip())
-        self.fulltext = flatten_paragraphs(fulltext)
-        self.clean_fulltext = flatten_paragraphs(clean_fulltext)
 
     def __run_all_with_prefix(self, prefix):
         for name in filter(lambda n: n.startswith(prefix), dir(self)):
@@ -38,13 +44,48 @@ class Paper(object):
             if inspect.ismethod(attribute):
                 attribute()
 
-    def run_all_checks(self):
+    def _run_all_checks(self):
         self.__run_all_with_prefix('check_')
 
-    def run_all_tests(self):
+    def _run_all_tests(self):
         self.__run_all_with_prefix('test_')
 
-    def _format_re_match(self, m, text):
+    ##########################################################################
+    # FUCTIONS THAT ARE RELEVANT FOR CHECKS WRITERS
+    ##########################################################################
+
+    def get_latex_text(self):
+        ''' Returns the complete paper, with each paragraph on a single
+            line. No latex/tex command is stripped '''
+        try:
+            return self.__latex_text
+        except:
+            text = ''
+            for filename in self.__filenames:
+                with open(filename) as f:
+                    text += f.read() + '\n'
+            self.__latex_text = self.__flatten_paragraphs(text)
+            return self.__latex_text
+
+    def get_text(self, ignored_environments=None):
+        ''' Returns the textual content of the tex files, latex/tex commands
+            stripped. You can control what enviroments to strip via the
+            'ignored_environments' argument: if you don't, the default ones
+            will be stripped'''
+        if ignored_environments == None:
+            ignored_environments = Paper._IGNORED_ENVIRONMENTS
+        try:
+            return self.__text[ignored_environments]
+        except:
+            text = subprocess.check_output(["detex",
+                                            "-e",
+                                             ignored_environments]
+                                             + self.__filenames)
+            self.__text[ignored_environments] = self.__flatten_paragraphs(
+                                                                        text)
+            return self.__text[ignored_environments]
+
+    def format_re_match(self, m, text):
         start_of_sentence = max(text.rfind('\n', 0, m.start()) + 1, 0)
         end_of_sentence = text.find('\n', m.end()), len(text)
         if end_of_sentence == -1:
@@ -53,6 +94,7 @@ class Paper(object):
                         min(end_of_sentence, m.end() + 10)]
         return a_string.split('\n', 1)[0]
 
+
     ##########################################################################
     # CHECKS
     ##########################################################################
@@ -60,15 +102,15 @@ class Paper(object):
     def check_exempli_gratia_without_comma(self):
         errors = 0
         for m in re.finditer(r'e\.g\.[^,]',
-                             self.clean_fulltext,
+                             self.get_text(),
                              re.MULTILINE):
-            print "E.G. without comma:", self._format_re_match(m,
-                                            self.clean_fulltext)
+            print "E.G. without comma:", self.format_re_match(m,
+                                            self.get_text())
             errors += 1
         return errors
 
     def test__check_exempli_gratia_without_comma(self):
-        self.clean_fulltext = "e.g. a pony \n e.g. what?, e.g., cool!"
+        self.get_text = lambda: "e.g. a pony \n e.g. what?, e.g., cool!"
         assert self.check_exempli_gratia_without_comma() == 2
 
     ##########################################################################
@@ -76,15 +118,15 @@ class Paper(object):
     def check_id_est_without_comma(self):
         errors = 0
         for m in re.finditer(r'i\.e\.[^,]',
-                             self.clean_fulltext,
+                             self.get_text(),
                              re.MULTILINE):
-            print "I.E. without comma:", self._format_re_match(m,
-                                            self.clean_fulltext)
+            print "I.E. without comma:", self.format_re_match(m,
+                                            self.get_text())
             errors += 1
         return errors
 
     def test__check_id_est_without_comma(self):
-        self.clean_fulltext = "i.e. a pony \n i.e. what?, i.e., cool!"
+        self.get_text = lambda: "i.e. a pony \n i.e. what?, i.e., cool!"
         assert self.check_id_est_without_comma() == 2
 
     ##########################################################################
@@ -92,15 +134,15 @@ class Paper(object):
     def check_quotes(self):
         errors = 0
         for m in re.finditer(r'"',
-                             self.clean_fulltext,
+                             self.get_text(),
                              re.MULTILINE):
             print '"hello" should be substituted with ``hello\'\':', \
-                                self._format_re_match(m, self.clean_fulltext)
+                                self.format_re_match(m, self.get_text())
             errors += 1
         return errors
 
     def test__check_quotes(self):
-        self.clean_fulltext = '"this is not ok" ``but this is\'\''
+        self.get_text = lambda: '"this is not ok" ``but this is\'\''
         assert self.check_quotes() == 2
 
     ##########################################################################
@@ -109,18 +151,18 @@ class Paper(object):
         errors = 0
         for keyword in ["cite", "ref"]:
             for m in re.finditer(r'(^|\s)\\' + keyword + r'\s*{',
-                                 self.clean_fulltext,
+                                 self.get_text(),
                                  re.MULTILINE):
                 print 'use hello~\%s{ instead of hello \%s{:' % (keyword,
                                                                  keyword), \
-                            self._format_re_match(m, self.clean_fulltext)
+                            self.format_re_match(m, self.get_text())
                 errors += 1
         return errors
 
     def test__check_citing_with_unbreakeable_spaces(self):
-        self.clean_fulltext = r'citing: wrong \cite{ciao} - right~\cite{ciao}'
+        self.get_text = lambda: r'citing: wrong \cite{ciao} - right~\cite{ciao}'
         assert self.check_citing_with_unbreakeable_spaces() == 1
-        self.clean_fulltext = r'refs done wrong \ref{ciao} - right~\ref{ciao}'
+        self.get_text = lambda: r'refs done wrong \ref{ciao} - right~\ref{ciao}'
         assert self.check_citing_with_unbreakeable_spaces() == 1
 
     ##########################################################################
@@ -128,27 +170,27 @@ class Paper(object):
     def check_commas_in_numbers(self):
         errors = 0
         for m in re.finditer('(^|[^\w\-])\d{5}',
-                             self.clean_fulltext,
+                             self.get_text(),
                              re.MULTILINE):
             print 'Put commas in numbers over 10,000:', \
-                                self._format_re_match(m, self.clean_fulltext)
+                                self.format_re_match(m, self.get_text())
             errors += 1
         for m in re.finditer('[^\d]\d,\d{3}[^,]',
-                             self.clean_fulltext,
+                             self.get_text(),
                              re.MULTILINE):
             print "Don't put commas in numbers under 10,000:", \
-                                self._format_re_match(m, self.clean_fulltext)
+                                self.format_re_match(m, self.get_text())
             errors += 1
         return errors
 
     def test__check_commas_in_numbers(self):
-        self.clean_fulltext = r'10000 cats eat 10,000 mice'
+        self.get_text = lambda: r'10000 cats eat 10,000 mice'
         assert self.check_commas_in_numbers() == 1
-        self.clean_fulltext = r'9999 cats eat 9,999 mice'
+        self.get_text = lambda: r'9999 cats eat 9,999 mice'
         assert self.check_commas_in_numbers() == 1
-        self.clean_fulltext = r'1000 cats eat 999,999 mice'
+        self.get_text = lambda: r'1000 cats eat 999,999 mice'
         assert self.check_commas_in_numbers() == 0
-        self.clean_fulltext = r'project N10000, grant CNS-20000'
+        self.get_text = lambda: r'project N10000, grant CNS-20000'
         assert self.check_commas_in_numbers() == 0
 
     ##########################################################################
@@ -156,15 +198,15 @@ class Paper(object):
     def check_commas_after_quotes(self):
         errors = 0
         for m in re.finditer("''\s*,",
-                             self.clean_fulltext,
+                             self.get_text(),
                              re.MULTILINE):
             print "Convert ``hello'', => ``hello,'' :", \
-                                self._format_re_match(m, self.clean_fulltext)
+                                self.format_re_match(m, self.get_text())
             errors += 1
         return errors
 
     def test__check_commas_after_quotes(self):
-        self.clean_fulltext = r"``flower'', should be ``flower,''"
+        self.get_text = lambda: r"``flower'', should be ``flower,''"
         assert self.check_commas_after_quotes() == 1
 
     ##########################################################################
@@ -174,15 +216,15 @@ class Paper(object):
 
         for reg in ["internet", "javascript"]:
             for m in re.finditer(reg,
-                                 self.clean_fulltext,
+                                 self.get_text(),
                                  re.MULTILINE):
                 print "Always capitalize:", \
-                            self._format_re_match(m, self.clean_fulltext)
+                            self.format_re_match(m, self.get_text())
                 errors += 1
         return errors
 
     def test__check_always_capitalize(self):
-        self.clean_fulltext = r"internet"
+        self.get_text = lambda: r"internet"
         assert self.check_always_capitalize() == 1
 
     ##########################################################################
@@ -190,17 +232,17 @@ class Paper(object):
     def check_comma_before_that(self):
         errors = 0
         for m in re.finditer(",\s+that",
-                             self.clean_fulltext,
+                             self.get_text(),
                              re.MULTILINE):
             print "Do not put a comma before 'that':", \
-                                self._format_re_match(m, self.clean_fulltext)
+                                self.format_re_match(m, self.get_text())
             errors += 1
         return errors
 
     def test__check_comma_before_that(self):
-        self.clean_fulltext = r"I like cats, that eat mice"
+        self.get_text = lambda: r"I like cats, that eat mice"
         assert self.check_comma_before_that() == 1
-        self.clean_fulltext = r"I like cats that eat mice"
+        self.get_text = lambda: r"I like cats that eat mice"
         assert self.check_comma_before_that() == 0
 
     ##########################################################################
@@ -208,24 +250,24 @@ class Paper(object):
     def check_comma_before_which(self):
         errors = 0
         for m in re.finditer("[^,\s]\s+which",
-                             self.clean_fulltext,
+                             self.get_text(),
                              re.MULTILINE):
-            word_before_start = self.clean_fulltext.rfind(' ', 0, m.start())
-            word_before = re.search("\w+", self.clean_fulltext[
+            word_before_start = self.get_text().rfind(' ', 0, m.start())
+            word_before = re.search("\w+", self.get_text()[
                                                 word_before_start + 1:
                                                 m.start() + 1]).group()
             if word_before in ["in", "for", "of", "before", "after", "from",
                                "through", "to", "at"]:
                 continue
             print "Put a comma before 'which':", \
-                                self._format_re_match(m, self.clean_fulltext)
+                                self.format_re_match(m, self.get_text())
             errors += 1
         return errors
 
     def test__check_comma_before_which(self):
-        self.clean_fulltext = r"I like that cat, which eat mice"
+        self.get_text = lambda: r"I like that cat, which eat mice"
         assert self.check_comma_before_which() == 0
-        self.clean_fulltext = r"I like that cat which eat mice"
+        self.get_text = lambda: r"I like that cat which eat mice"
         assert self.check_comma_before_which() == 1
 
     ##########################################################################
@@ -238,44 +280,45 @@ class Paper(object):
                              "lustre": "luster", "modelled": "modeled", "revelled": "raveled", "shovelled": "shoveled", "snivelled": "sniveled", 
                              "theatre": "theater", "towards": "toward", "travelling": "traveling", "yodelling": "yodeling"}
         for british, american in british_spellings.iteritems():
-            for m in re.finditer("[^\w]+" + british + "[^\w]+", self.clean_fulltext):
-                print "Don't spell like a bugger (that's british english):", american, "not", self._format_re_match(m, self.clean_fulltext)
+            for m in re.finditer("[^\w]+" + british + "[^\w]+", self.get_text()):
+                print "Don't spell like a bugger (that's british english):", american, "not", self.format_re_match(m, self.get_text())
                 errors += 1
         return errors
 
     def test__check_british_spelling(self):
-        self.clean_fulltext = r"Go to the (centre) of town to pick up the best flavour colour."
+        self.get_text = lambda: r"Go to the (centre) of town to pick up the best flavour colour."
         assert self.check_british_spelling() == 3
-        self.clean_fulltext = r"I am an American, therefore I am"
+        self.get_text = lambda: r"I am an American, therefore I am"
         assert self.check_british_spelling() == 0
-        self.clean_fulltext = r"This cheque, right here, is unacceptable. I'll have to cheque with my manager."
+        self.get_text = lambda: r"This cheque, right here, is unacceptable. I'll have to cheque with my manager."
         assert self.check_british_spelling() == 2
-        self.clean_fulltext = r"It is hard to parse this sentence."
+        self.get_text = lambda: r"It is hard to parse this sentence."
         assert self.check_british_spelling() == 0
 
     ##########################################################################
 
     def check_is_comprised_of(self):
         errors = 0
-        for m in re.finditer("([^\w]+|^)is[\s]+comprised[\s]+of[^\w]+", self.clean_fulltext, flags=re.IGNORECASE):
-            print "Don't use 'is comprised of'. Bugs book segment 75.", self._format_re_match(m, self.clean_fulltext)
+        for m in re.finditer("([^\w]+|^)is[\s]+comprised[\s]+of[^\w]+", self.get_text(), flags=re.IGNORECASE):
+            print "Don't use 'is comprised of'. Bugs book segment 75.", self.format_re_match(m, self.get_text())
             errors += 1
         return errors
 
     def test__check_is_comprised_of(self):
-        self.clean_fulltext = r"Adam is comprised of a brain and a stomach."
+        self.get_text = lambda: r"Adam is comprised of a brain and a stomach."
         assert self.check_is_comprised_of() == 1
-        self.clean_fulltext = r"Adam comprises a brain and a stomach."
+        self.get_text = lambda: r"Adam comprises a brain and a stomach."
         assert self.check_is_comprised_of() == 0
-        self.clean_fulltext = r"You don't know what that is. Comprised. Of."
+        self.get_text = lambda: r"You don't know what that is. Comprised. Of."
         assert self.check_is_comprised_of() == 0
-        self.clean_fulltext = r"Is comprised of blah and bloop."
+        self.get_text = lambda: r"Is comprised of blah and bloop."
         assert self.check_is_comprised_of() == 1
-        self.clean_fulltext = r"Adam is awesome. Is comprised of blah and bloop."
+        self.get_text = lambda: r"Adam is awesome. Is comprised of blah and bloop."
         assert self.check_is_comprised_of() == 1
+
 
 if __name__ == '__main__':
     if sys.argv[1] == "test":
-        Paper(sys.argv[2:]).run_all_tests()
+        Paper(sys.argv[2:])._run_all_tests()
     else:
-        Paper(sys.argv[1:]).run_all_checks()
+        Paper(sys.argv[1:])._run_all_checks()
