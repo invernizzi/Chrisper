@@ -18,7 +18,8 @@ PREPOSITIONS = ["a", "abaft", "aboard", "about", "above", "absent",
     "over", "pace", "past", "per", "plus", "pro", "qua", "regarding", "round",
     "sans", "save", "since", "than", "through,", "throughout,", "till", "times",
     "to", "toward", "towards", "under", "underneath", "unlike", "until", "unto",
-    "up", "upon", "versus", "via", "vice", "with", "within", "without", "worth"]
+    "up", "upon", "versus", "via", "vice", "with", "within", "without",
+    "worth", "through"]
 
 
 class Paper(object):
