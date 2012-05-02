@@ -90,10 +90,10 @@ class Paper(object):
                              "lstlisting")
 
     def get_text(self, ignored_environments=None):
-        ''' Returns the textual content of the tex files, latex/tex commands
-            stripped. You can control what enviroments to strip via the
-            'ignored_environments' argument: if you don't, the default ones
-            will be stripped'''
+        ''' Returns the textual content of the tex files, with latex/tex
+        enviroments stripped. You can control the enviroments to strip via
+        the 'ignored_environments' argument: if you don't, the default ones
+        will be stripped'''
         if ignored_environments == None:
             ignored_environments = Paper._IGNORED_ENVIRONMENTS
         try:
