@@ -318,7 +318,19 @@ class Paper(object):
 
 
 if __name__ == '__main__':
+    if len(sys.argv) < 2:
+        print """Usage:
+ - chrisper paper.tex [additional_files.tex] 
+      Analyzes the tex files listed, and any file
+      included from them via Latex commands (e.g.,\input)
+
+ - chrisper test
+      Runs the test suite.
+        """
+        sys.exit(0)
+
     if sys.argv[1] == "test":
         Paper(sys.argv[2:])._run_all_tests()
+        print "\n=== ALL TESTS PASSED ==="
     else:
         Paper(sys.argv[1:])._run_all_checks()
