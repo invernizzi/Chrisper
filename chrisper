@@ -306,7 +306,9 @@ class Paper(object):
                              "theatre": "theater", "towards": "toward", "travelling": "traveling", "yodelling": "yodeling"}
         for british, american in british_spellings.iteritems():
             for m in re.finditer("[^\w]+" + british + "[^\w]+", self.get_text()):
-                print "Don't spell like a bugger (that's british english):", american, "not", self.format_re_match(m, self.get_text())
+                print ("Don't spell like a bugger (that's british english) --"
+                    "it's ", american, ", not: ", self.format_re_match(m,
+                    self.get_text()))
                 errors += 1
         return errors
 
@@ -319,6 +321,22 @@ class Paper(object):
         assert self.check_british_spelling() == 2
         self.get_text = lambda: r"It is hard to parse this sentence."
         assert self.check_british_spelling() == 0
+
+    ##########################################################################
+
+    def check_misplelled_standard_phrases(self):
+        errors = 0
+        mispellings = {"in more details": "in more detail"}
+        for wrong, right in mispellings.iteritems():
+            for m in re.finditer("[^\w]+" + wrong + "[^\w]+", self.get_text()):
+                print ("Mispelled standard phrase -'", wrong, "' should be'",
+                    right, "in:", self.format_re_match(m, self.get_text()))
+                errors += 1
+        return errors
+
+    def test__check_misplelled_standard_phrases(self):
+        self.get_text = lambda: r"I'll discuss this in more details in section"
+        assert self.check_misplelled_standard_phrases() == 1
 
     ##########################################################################
 
