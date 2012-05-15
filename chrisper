@@ -174,18 +174,18 @@ class Paper(object):
         errors = 0
         for keyword in ["cite", "ref"]:
             for m in re.finditer(r'(^|\s)\\' + keyword + r'\s*{',
-                                 self.get_text(),
+                                 self.get_latex_text(),
                                  re.MULTILINE):
                 print 'use hello~\%s{ instead of hello \%s{:' % (keyword,
                                                                  keyword), \
-                            self.format_re_match(m, self.get_text())
+                            self.format_re_match(m, self.get_latex_text())
                 errors += 1
         return errors
 
     def test__check_citing_with_unbreakeable_spaces(self):
-        self.get_text = lambda: r'citing: wrong \cite{ciao} - right~\cite{ciao}'
+        self.get_latex_text = lambda: r'citing: wrong \cite{ciao} - right~\cite{ciao}'
         assert self.check_citing_with_unbreakeable_spaces() == 1
-        self.get_text = lambda: r'refs done wrong \ref{ciao} - right~\ref{ciao}'
+        self.get_latex_text = lambda: r'refs done wrong \ref{ciao} - right~\ref{ciao}'
         assert self.check_citing_with_unbreakeable_spaces() == 1
 
     ##########################################################################
