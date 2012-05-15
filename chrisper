@@ -376,4 +376,10 @@ if __name__ == '__main__':
         Paper(sys.argv[2:])._run_all_tests()
         print "\n=== ALL TESTS PASSED ==="
     else:
-        Paper(sys.argv[1:])._run_all_checks()
+        paper = Paper(sys.argv[1:])
+        paper._run_all_checks()
+        if paper.errors == 0:
+            print '=== IT LOOKS GOOD TO ME. CONGRATS! ==='
+        else:
+            print "\n=== I'VE FOUND %d ISSUES ===" % paper.errors
+            sys.exit(1)
