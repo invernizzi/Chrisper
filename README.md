@@ -1,5 +1,5 @@
-Chrisper: Chris-proof your papers
-=================================
+Chrisper: Check the style of your papers
+========================================
 
 Chrisper is a small utility that checks for common mistakes in the latex source of Computer Science papers.
 
