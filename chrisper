@@ -5,6 +5,16 @@ import sys
 import re
 import inspect
 
+try:
+    from clint.textui import colored
+except:
+    class Passthrough(object):
+        def __getattr__(self, name):
+            return lambda x: x
+
+    colored = Passthrough()
+    print "=== For colored output, install clint (via 'sudo pip install clint') ==="
+
 # List of all english prepositions
 PREPOSITIONS = ["a", "abaft", "aboard", "about", "above", "absent",
     "across", "afore", "after", "against", "along", "alongside", "amid",
@@ -64,6 +74,18 @@ class Paper(object):
     def _run_all_tests(self):
         self.__run_all_with_prefix('test_')
 
+    def _format_re_match(self, m, text):
+        start_of_sentence = max(text.rfind('\n', 0, m.start()) + 1, 0)
+        end_of_sentence = text.find('\n', m.end()), len(text)
+        if end_of_sentence == -1:
+            end_of_sentence = len(text)
+        a_string_start = max(start_of_sentence, m.start() - 10)
+        a_string_end = min(end_of_sentence, m.end() + 10)
+        a_string = text[a_string_start : m.start()]
+        a_string += colored.yellow(text[m.start() : m.end()])
+        a_string += text[m.end() : a_string_end]
+        return a_string.split('\n', 1)[0]
+
     ##########################################################################
     # FUCTIONS THAT ARE RELEVANT FOR CHECKS WRITERS
     ##########################################################################
@@ -110,19 +132,17 @@ class Paper(object):
                                                                         text)
             return self.__text[ignored_environments]
 
-    def format_re_match(self, m, text):
-        start_of_sentence = max(text.rfind('\n', 0, m.start()) + 1, 0)
-        end_of_sentence = text.find('\n', m.end()), len(text)
-        if end_of_sentence == -1:
-            end_of_sentence = len(text)
-        a_string = text[max(start_of_sentence, m.start() - 10):
-                        min(end_of_sentence, m.end() + 10)]
-        return a_string.split('\n', 1)[0]
 
     def perform_test(self, function, expected_errors_num):
         self.errors = 0
         function()
         assert expected_errors_num == self.errors
+
+    def print_issue(self, message, match=None, text=None):
+        if text == None:
+            text = self.get_text()
+        message = colored.red(message)
+        print colored.red(message)+":", self._format_re_match(match, text)
 
     ##########################################################################
     # CHECKS
@@ -132,8 +152,7 @@ class Paper(object):
         for m in re.finditer(r'e\.g\.[^,]',
                              self.get_text(),
                              re.MULTILINE):
-            print "E.G. without comma:", self.format_re_match(m,
-                                            self.get_text())
+            self.print_issue("E.G. without comma", m)
             self.errors += 1
 
     def test__check_exempli_gratia_without_comma(self):
@@ -146,8 +165,7 @@ class Paper(object):
         for m in re.finditer(r'i\.e\.[^,]',
                              self.get_text(),
                              re.MULTILINE):
-            print "I.E. without comma:", self.format_re_match(m,
-                                            self.get_text())
+            self.print_issue("I.E. without comma", m)
             self.errors += 1
 
     def test__check_id_est_without_comma(self):
@@ -160,8 +178,7 @@ class Paper(object):
         for m in re.finditer(r'"',
                              self.get_text(),
                              re.MULTILINE):
-            print '"hello" should be substituted with ``hello\'\':', \
-                                self.format_re_match(m, self.get_text())
+            self.print_issue('"hello" should be ``hello\'\'', m)
             self.errors += 1
 
     def test__check_quotes(self):
@@ -175,9 +192,9 @@ class Paper(object):
             for m in re.finditer(r'(^|\s)\\' + keyword + r'\s*{',
                                  self.get_latex_text(),
                                  re.MULTILINE):
-                print 'use hello~\%s{ instead of hello \%s{:' % (keyword,
-                                                                 keyword), \
-                            self.format_re_match(m, self.get_latex_text())
+                self.print_issue('use hello~\%s{ instead of hello \%s{' % (keyword,
+                                                                 keyword),
+                                m, self.get_latex_text())
                 self.errors += 1
 
     def test__check_citing_with_unbreakeable_spaces(self):
@@ -193,12 +210,10 @@ class Paper(object):
         text = self.get_text(ignored_environments=tuple(
                 set(Paper._IGNORED_ENVIRONMENTS) - set('table')))
         for m in re.finditer('(^|[^\w\-])\d{5}', text, re.MULTILINE):
-            print 'Put commas in numbers over 10,000:', \
-                                self.format_re_match(m, self.get_text())
+            self.print_issue('Put commas in numbers over 10,000', m)
             self.errors += 1
         for m in re.finditer('[^\d]\d,\d{3}[^,]', text, re.MULTILINE):
-            print "Don't put commas in numbers under 10,000:", \
-                                self.format_re_match(m, self.get_text())
+            self.print_issue("Don't put commas in numbers under 10,000", m)
             self.errors += 1
 
     def test__check_commas_in_numbers(self):
@@ -219,8 +234,7 @@ class Paper(object):
         for m in re.finditer("''\s*,",
                              self.get_text(),
                              re.MULTILINE):
-            print "Convert ``hello'', => ``hello,'' :", \
-                                self.format_re_match(m, self.get_text())
+            self.print_issue("Convert ``hello'', => ``hello,''", m)
             self.errors += 1
 
     def test__check_commas_after_quotes(self):
@@ -235,8 +249,7 @@ class Paper(object):
             for m in re.finditer(reg,
                                  self.get_text(),
                                  re.MULTILINE):
-                print "Always capitalize:", \
-                            self.format_re_match(m, self.get_text())
+                self.print_issue("Always capitalize", m)
                 self.errors += 1
 
     def test__check_always_capitalize(self):
@@ -249,8 +262,7 @@ class Paper(object):
         for m in re.finditer(",\s+that",
                              self.get_text(),
                              re.MULTILINE):
-            print "Do not put a comma before 'that':", \
-                                self.format_re_match(m, self.get_text())
+            self.print_issue("Do not put a comma before 'that'", m)
             self.errors += 1
 
     def test__check_comma_before_that(self):
@@ -273,8 +285,7 @@ class Paper(object):
                 continue
             if word_before.endswith('ing'):
                 continue
-            print "Put a comma before 'which':", \
-                                self.format_re_match(m, self.get_text())
+            self.print_issue("Put a comma before 'which'", m)
             self.errors += 1
 
     def test__check_comma_before_which(self):
@@ -293,8 +304,7 @@ class Paper(object):
             word_before = re.search("\w+", text[word_before_start + 1:
                                                 m.start() + 1]).group()
             if not word_before in ["and"] and not word_before[0].isupper():
-                print r'Capitalize the word before \ref:', \
-                                    self.format_re_match(m, text)
+                self.print_issue(r'Capitalize the word before \ref', m)
                 self.errors += 1
 
     def test__check_word_before_ref_is_capitalized(self):
@@ -313,9 +323,8 @@ class Paper(object):
                              "theatre": "theater", "towards": "toward", "travelling": "traveling", "yodelling": "yodeling"}
         for british, american in british_spellings.iteritems():
             for m in re.finditer("[^\w]+" + british + "[^\w]+", self.get_text()):
-                print "Don't spell like a bugger (that's british english) -" \
-                    " it's '", american, "' , not:", self.format_re_match(m, \
-                    self.get_text())
+                self.print_issue("Don't spell like a bugger (that's british english) -" \
+                    " it's ' "+ american + " ' , not", m)
                 self.errors += 1
 
     def test__check_british_spelling(self):
@@ -334,8 +343,8 @@ class Paper(object):
         mispellings = {"in more details": "in more detail"}
         for wrong, right in mispellings.iteritems():
             for m in re.finditer("[^\w]+" + wrong + "[^\w]+", self.get_text()):
-                print "Mispelled standard phrase - '", wrong, "' should be '", \
-                    right, "' in:", self.format_re_match(m, self.get_text())
+                self.print_issue("Mispelled standard phrase - ' %s ' "
+                        "should be ' %s' in" % (wrong, right), m)
                 self.errors += 1
 
     def test__check_misplelled_standard_phrases(self):
@@ -344,22 +353,30 @@ class Paper(object):
 
     ##########################################################################
 
-    def check_is_comprised_of(self):
-        for m in re.finditer("([^\w]+|^)is[\s]+comprised[\s]+of[^\w]+", self.get_text(), flags=re.IGNORECASE):
-            print "Don't use 'is comprised of'. Bugs book segment 75.", self.format_re_match(m, self.get_text())
-            self.errors += 1
+    def check_banned_words(self):
+        banned_words = ["is[\s]+comprised[\s]+of",
+                        "doesn't",
+                        "won't",
+                        "can't"]
+        for banned_word in banned_words:
+            for m in re.finditer("([^\w]+|^)" + banned_word + "[^\w]+",
+                                 self.get_text(), flags=re.IGNORECASE):
+                self.print_issue("Don't use %s" % banned_word, m)
+                self.errors += 1
 
-    def test__check_is_comprised_of(self):
+    def test__check_banned_words(self):
         self.get_text = lambda: r"Adam is comprised of a brain and a stomach."
-        self.perform_test(self.check_is_comprised_of, 1)
+        self.perform_test(self.check_banned_words, 1)
         self.get_text = lambda: r"Adam comprises a brain and a stomach."
-        self.perform_test(self.check_is_comprised_of, 0)
+        self.perform_test(self.check_banned_words, 0)
         self.get_text = lambda: r"You don't know what that is. Comprised. Of."
-        self.perform_test(self.check_is_comprised_of, 0)
+        self.perform_test(self.check_banned_words, 0)
         self.get_text = lambda: r"Is comprised of blah and bloop."
-        self.perform_test(self.check_is_comprised_of, 1)
+        self.perform_test(self.check_banned_words, 1)
         self.get_text = lambda: r"Adam is awesome. Is comprised of blah and bloop."
-        self.perform_test(self.check_is_comprised_of, 1)
+        self.perform_test(self.check_banned_words, 1)
+        self.get_text = lambda: r"Don't do this. I won't tell anybody."
+        self.perform_test(self.check_banned_words, 1)
 
 
 if __name__ == '__main__':
@@ -374,12 +391,13 @@ if __name__ == '__main__':
 
     if sys.argv[1] == "test":
         Paper(sys.argv[2:])._run_all_tests()
-        print "\n=== ALL TESTS PASSED ==="
+        print colored.green("\n=== ALL TESTS PASSED ===")
     else:
         paper = Paper(sys.argv[1:])
         paper._run_all_checks()
         if paper.errors == 0:
-            print '=== IT LOOKS GOOD TO ME. CONGRATS! ==='
+            print colored.green('=== IT LOOKS GOOD TO ME. CONGRATS! ===')
         else:
-            print "\n=== I'VE FOUND %d ISSUES ===" % paper.errors
+            print colored.yellow("\n=== I'VE FOUND %d ISSUES ===" %
+                    paper.errors)
             sys.exit(1)

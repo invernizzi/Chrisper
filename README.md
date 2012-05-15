@@ -14,6 +14,10 @@ on a Debian derivative system with:
 
      sudo apt-get install texlive-extra-utils
 
+If you want to be fancy and have the (optional) colored output,
+
+     sudo pip install clint
+
 Add chrisper in you path to use it, or copy it directly in
 the root path of you awesome paper.
 
