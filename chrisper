@@ -292,7 +292,7 @@ class Paper(object):
                                     text.rfind('~', 0, m.start() - 2))
             word_before = re.search("\w+", text[word_before_start + 1:
                                                 m.start() + 1]).group()
-            if not word_before[0].isupper():
+            if not word_before in ["and"] and not word_before[0].isupper():
                 print r'Capitalize the word before \ref:', \
                                     self.format_re_match(m, text)
                 self.errors += 1
