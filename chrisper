@@ -297,6 +297,28 @@ class Paper(object):
 
     ##########################################################################
 
+    def check_word_before_ref_is_capitalized(self):
+        errors = 0
+        text = self.get_latex_text()
+        for m in re.finditer('\\\\ref', text, re.MULTILINE):
+            word_before_start = max(text.rfind(' ', 0, m.start() - 2),
+                                    text.rfind('~', 0, m.start() - 2))
+            word_before = re.search("\w+", text[word_before_start + 1:
+                                                m.start() + 1]).group()
+            if not word_before[0].isupper():
+                print r'Capitalize the word before \ref:', \
+                                    self.format_re_match(m, text)
+                errors += 1
+        return errors
+
+    def test__check_word_before_ref_is_capitalized(self):
+        self.get_latex_text = lambda: "in Section \\ref{sec}, see Figure \\ref{fig}"
+        assert self.check_word_before_ref_is_capitalized() == 0
+        self.get_latex_text = lambda: "in section \\ref{sec}, see figure \\ref{fig}"
+        assert self.check_word_before_ref_is_capitalized() == 2
+
+    ##########################################################################
+
     def check_british_spelling(self):
         errors = 0
         british_spellings = {"acknowledgement": "acknowledgment", "afterwards": "afterward", "arse": "ass", "backwards": "backward", "besides": "beside",
