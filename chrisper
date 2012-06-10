@@ -4,6 +4,8 @@ import subprocess
 import sys
 import re
 import inspect
+import datetime
+import string
 
 try:
     from clint.textui import colored
@@ -15,7 +17,6 @@ except:
     colored = Passthrough()
     print "=== For colored output, install clint (via 'sudo pip install clint') ==="
 
-# List of all english prepositions
 PREPOSITIONS = ["a", "abaft", "aboard", "about", "above", "absent",
     "across", "afore", "after", "against", "along", "alongside", "amid",
     "amidst", "among", "amongst", "an", "apropos", "around", "as", "aside",
@@ -31,6 +32,8 @@ PREPOSITIONS = ["a", "abaft", "aboard", "about", "above", "absent",
     "up", "upon", "versus", "via", "vice", "with", "within", "without",
     "worth", "through"]
 
+CONJUNCTIONS = ["and", "but", "or", "yet", "for", "nor", "so"]
+
 
 class Paper(object):
 
@@ -40,8 +43,12 @@ class Paper(object):
 
     def __init__(self, filenames):
         self.__filenames = filenames
-        self.__text = {}
         self.errors = 0
+        self.__clear_caches()
+
+    def __clear_caches(self):
+        self.__text = {}
+        self.__latex_text = None
 
     @staticmethod
     def __flatten_paragraphs(text):
@@ -63,15 +70,22 @@ class Paper(object):
                         if paragraph.strip())
 
     def __run_all_with_prefix(self, prefix):
-        for name in filter(lambda n: n.startswith(prefix), dir(self)):
-            attribute = getattr(self, name)
-            if inspect.ismethod(attribute):
-                attribute()
+        # Switch filename and clear caches
+        for filename in self.__filenames:
+            self.filename = filename
+            self.__clear_caches()
+
+            # Call all functions
+            for name in filter(lambda n: n.startswith(prefix), dir(self)):
+                attribute = getattr(self, name)
+                if inspect.ismethod(attribute):
+                        attribute()
 
     def _run_all_checks(self):
         self.__run_all_with_prefix('check_')
 
     def _run_all_tests(self):
+        self.__filenames = ["TEST"]
         self.__run_all_with_prefix('test_')
 
     def _format_re_match(self, m, text):
@@ -84,7 +98,8 @@ class Paper(object):
         a_string = text[a_string_start : m.start()]
         a_string += colored.yellow(text[m.start() : m.end()])
         a_string += text[m.end() : a_string_end]
-        return a_string.split('\n', 1)[0]
+        to_return =  a_string.split('\n', 1)[0]
+        return to_return.replace('\r',' ').replace('\n',' ')
 
     ##########################################################################
     # FUCTIONS THAT ARE RELEVANT FOR CHECKS WRITERS
@@ -93,13 +108,11 @@ class Paper(object):
     def get_latex_text(self):
         ''' Returns the complete paper, with each paragraph on a single
             line. No latex/tex command is stripped '''
-        try:
+        if self.__latex_text != None:
             return self.__latex_text
-        except:
-            text = ''
-            for filename in self.__filenames:
-                with open(filename) as f:
-                    text += f.read() + '\n'
+        else:
+            with open(self.filename) as f:
+                text = f.read()
             self.__latex_text = self.__flatten_paragraphs(text)
             return self.__latex_text
 
@@ -126,8 +139,8 @@ class Paper(object):
             text = subprocess.check_output(["detex",
                                             "-n",
                                             "-e",
-                                             ','.join(ignored_environments)]
-                                             + self.__filenames)
+                                            ','.join(ignored_environments),
+                                            self.filename])
             self.__text[ignored_environments] = self.__flatten_paragraphs(
                                                                         text)
             return self.__text[ignored_environments]
@@ -142,7 +155,9 @@ class Paper(object):
         if text == None:
             text = self.get_text()
         message = colored.red(message)
-        print colored.red(message)+":", self._format_re_match(match, text)
+        print "%30s - %s: %s" % (colored.green(self.filename),
+                               colored.red(message),
+                               self._format_re_match(match, text))
 
     ##########################################################################
     # CHECKS
@@ -209,12 +224,24 @@ class Paper(object):
         # We also check in tables
         text = self.get_text(ignored_environments=tuple(
                 set(Paper._IGNORED_ENVIRONMENTS) - set('table')))
-        for m in re.finditer('(^|[^\w\-])\d{5}', text, re.MULTILINE):
-            self.print_issue('Put commas in numbers over 10,000', m)
-            self.errors += 1
-        for m in re.finditer('[^\d]\d,\d{3}[^,]', text, re.MULTILINE):
-            self.print_issue("Don't put commas in numbers under 10,000", m)
-            self.errors += 1
+        for m in re.finditer('(^|[^\w\-])\d{4}', text, re.MULTILINE):
+            if text[m.start():m.start() + 1] in string.punctuation:
+                continue
+            try:
+                number = int(text[m.start():m.end()])
+            except:
+                number = 0
+            if number not in range(1990, datetime.date.today().year + 2):
+                self.errors += 1
+                self.print_issue('Put commas in numbers over 1,000', m)
+
+        # This is the correct rule, but nobody follows it
+        # for m in re.finditer('(^|[^\w\-])\d{5}', text, re.MULTILINE):
+        #     self.print_issue('Put commas in numbers over 10,000', m)
+        #     self.errors += 1
+        # for m in re.finditer('[^\d]\d,\d{3}[^,]', text, re.MULTILINE):
+        #     self.print_issue("Don't put commas in numbers under 10,000", m)
+        #     self.errors += 1
 
     def test__check_commas_in_numbers(self):
         def get_text(*args, **kwargs): return text
@@ -224,8 +251,10 @@ class Paper(object):
         text = r'9999 cats eat 9,999 mice'
         self.perform_test(self.check_commas_in_numbers, 1)
         text = r'1000 cats eat 999,999 mice'
-        self.perform_test(self.check_commas_in_numbers, 0)
+        self.perform_test(self.check_commas_in_numbers, 1)
         text = r'project N10000, grant CNS-20000'
+        self.perform_test(self.check_commas_in_numbers, 0)
+        text = r'In 2001, we ate spaghetti'
         self.perform_test(self.check_commas_in_numbers, 0)
 
     ##########################################################################
@@ -274,16 +303,17 @@ class Paper(object):
     ##########################################################################
 
     def check_comma_before_which(self):
-        for m in re.finditer("[^,\s]\s+which",
+        for m in re.finditer("[^,'*\s]\s+which",
                              self.get_text(),
                              re.MULTILINE):
             word_before_start = self.get_text().rfind(' ', 0, m.start())
             word_before = re.search("\w+", self.get_text()[
                                                 word_before_start + 1:
                                                 m.start() + 1]).group()
-            if word_before in PREPOSITIONS:
+
+            if word_before in PREPOSITIONS + CONJUNCTIONS:
                 continue
-            if word_before.endswith('ing'):
+            if word_before.endswith('ing') or word_before.endswith('ly'):
                 continue
             self.print_issue("Put a comma before 'which'", m)
             self.errors += 1
@@ -375,7 +405,7 @@ class Paper(object):
         self.perform_test(self.check_banned_words, 1)
         self.get_text = lambda: r"Adam is awesome. Is comprised of blah and bloop."
         self.perform_test(self.check_banned_words, 1)
-        self.get_text = lambda: r"Don't do this. I won't tell anybody."
+        self.get_text = lambda: r"Don't do this. I won't, tell anybody."
         self.perform_test(self.check_banned_words, 1)
 
 
