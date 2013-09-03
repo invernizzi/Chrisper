@@ -275,7 +275,7 @@ class Paper(object):
     def check_always_capitalize(self):
 
         for reg in ["internet", "javascript"]:
-            for m in re.finditer(reg,
+            for m in re.finditer(r"\b{0}".format(reg),
                                  self.get_text(),
                                  re.MULTILINE):
                 self.print_issue("Always capitalize", m)
@@ -285,6 +285,8 @@ class Paper(object):
         self.get_text = lambda: r"internet"
         self.perform_test(self.check_always_capitalize, 1)
 
+        self.get_text = lambda: r"testinternet"
+        self.perform_test(self.check_always_capitalize, 0)
     ##########################################################################
 
     def check_comma_before_that(self):
