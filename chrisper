@@ -136,13 +136,21 @@ class Paper(object):
         try:
             return self.__text[ignored_environments]
         except:
-            text = subprocess.check_output(["detex",
-                                            "-n",
-                                            "-e",
-                                            ','.join(ignored_environments),
-                                            self.filename])
+            # Cleanup annoying things
+            text = self.get_latex_text()
+            text = re.sub(r'\cite{[^}]*}', '', text)
+            # Run it through detex
+            p = subprocess.Popen(["detex",
+                                  "-n",
+                                  "-e",
+                                  ','.join(ignored_environments)],
+                                 stdin=subprocess.PIPE,
+                                 stdout=subprocess.PIPE)
+            p.stdin.write(text)
+            text = p.communicate()[0]
+            p.stdin.close()
             self.__text[ignored_environments] = self.__flatten_paragraphs(
-                                                                        text)
+                text)
             return self.__text[ignored_environments]
 
 
@@ -351,7 +359,7 @@ class Paper(object):
         british_spellings = {"acknowledgement": "acknowledgment", "afterwards": "afterward", "arse": "ass", "backwards": "backward", "besides": "beside",
                              "cancelling": "canceling", "catalogue": "catalog", "centre": "center", "cheque": "check", "colour": "color", "dialogue": "dialog",
                              "favour": "favor", "flavour": "flavor", "forwards": "forward", "grey": "gray", "judgement": "judgment", "labour": "labor",
-                             "lustre": "luster", "modelled": "modeled", "revelled": "raveled", "shovelled": "shoveled", "snivelled": "sniveled", 
+                             "lustre": "luster", "modelled": "modeled", "revelled": "raveled", "shovelled": "shoveled", "snivelled": "sniveled",
                              "theatre": "theater", "towards": "toward", "travelling": "traveling", "yodelling": "yodeling"}
         for british, american in british_spellings.iteritems():
             for m in re.finditer("[^\w]+" + british + "[^\w]+", self.get_text()):
