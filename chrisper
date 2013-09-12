@@ -6,6 +6,7 @@ import re
 import inspect
 import datetime
 import string
+from collections import defaultdict, Counter
 
 try:
     from clint.textui import colored
@@ -139,6 +140,7 @@ class Paper(object):
             # Cleanup annoying things
             text = self.get_latex_text()
             text = re.sub(r'\cite{[^}]*}', '', text)
+            text = re.sub(r'\\-', '', text)
             # Run it through detex
             p = subprocess.Popen(["detex",
                                   "-n",
@@ -163,9 +165,13 @@ class Paper(object):
         if text == None:
             text = self.get_text()
         message = colored.red(message)
+        if match and text:
+            example = self._format_re_match(match, text)
+        else:
+            example = ''
         print "%30s - %s: %s" % (colored.green(self.filename),
-                               colored.red(message),
-                               self._format_re_match(match, text))
+                                 colored.red(message),
+                                 example)
 
     ##########################################################################
     # CHECKS
@@ -225,6 +231,33 @@ class Paper(object):
         self.perform_test(self.check_citing_with_unbreakeable_spaces, 1)
         self.get_latex_text = lambda: r'refs done wrong \ref{ciao} - right~\ref{ciao}'
         self.perform_test(self.check_citing_with_unbreakeable_spaces, 1)
+
+    ##########################################################################
+
+    def check_variations_of_word_spellings(self):
+        words = defaultdict(Counter)
+        for word in re.findall(r'\b\S+\b', self.get_text(), re.MULTILINE):
+            word_alphanum = re.sub("[^a-zA-Z0-9_']+", '', word).lower()
+            words[word_alphanum].update([word])
+        for _, spellings_counter in words.iteritems():
+            variations = len(spellings_counter.keys())
+            total_appereances = sum(spellings_counter.values())
+            if variations > 1:
+                if len(set(w[1:] for w in spellings_counter.keys())) == 1:
+                    # FIXME: for now, if it's just a case mismatch on the first
+                    # letter, skip
+                    continue
+                self.print_issue('This word has multiple spellings: %s' % (
+                    dict(spellings_counter)), None)
+                self.errors += 1
+
+    def test__check_variations_of_word_spellings(self):
+        self.get_text = lambda: (r'I has a cybercriminal. I had a cyber-criminal. '
+                                       r'or was it a CyberCriminal?')
+        self.perform_test(self.check_variations_of_word_spellings, 1)
+        self.get_text = lambda: (r'no strange words here, however put. '
+                                       r'However, is that true?')
+        self.perform_test(self.check_variations_of_word_spellings, 0)
 
     ##########################################################################
 
