@@ -6,6 +6,7 @@ import re
 import inspect
 import datetime
 import string
+from collections import defaultdict, Counter
 
 try:
     from clint.textui import colored
@@ -136,13 +137,22 @@ class Paper(object):
         try:
             return self.__text[ignored_environments]
         except:
-            text = subprocess.check_output(["detex",
-                                            "-n",
-                                            "-e",
-                                            ','.join(ignored_environments),
-                                            self.filename])
+            # Cleanup annoying things
+            text = self.get_latex_text()
+            text = re.sub(r'\cite{[^}]*}', '', text)
+            text = re.sub(r'\\-', '', text)
+            # Run it through detex
+            p = subprocess.Popen(["detex",
+                                  "-n",
+                                  "-e",
+                                  ','.join(ignored_environments)],
+                                 stdin=subprocess.PIPE,
+                                 stdout=subprocess.PIPE)
+            p.stdin.write(text)
+            text = p.communicate()[0]
+            p.stdin.close()
             self.__text[ignored_environments] = self.__flatten_paragraphs(
-                                                                        text)
+                text)
             return self.__text[ignored_environments]
 
 
@@ -155,9 +165,13 @@ class Paper(object):
         if text == None:
             text = self.get_text()
         message = colored.red(message)
+        if match and text:
+            example = self._format_re_match(match, text)
+        else:
+            example = ''
         print "%30s - %s: %s" % (colored.green(self.filename),
-                               colored.red(message),
-                               self._format_re_match(match, text))
+                                 colored.red(message),
+                                 example)
 
     ##########################################################################
     # CHECKS
@@ -220,6 +234,33 @@ class Paper(object):
 
     ##########################################################################
 
+    def check_variations_of_word_spellings(self):
+        words = defaultdict(Counter)
+        for word in re.findall(r'\b\S+\b', self.get_text(), re.MULTILINE):
+            word_alphanum = re.sub("[^a-zA-Z0-9_']+", '', word).lower()
+            words[word_alphanum].update([word])
+        for _, spellings_counter in words.iteritems():
+            variations = len(spellings_counter.keys())
+            total_appereances = sum(spellings_counter.values())
+            if variations > 1:
+                if len(set(w[1:] for w in spellings_counter.keys())) == 1:
+                    # FIXME: for now, if it's just a case mismatch on the first
+                    # letter, skip
+                    continue
+                self.print_issue('This word has multiple spellings: %s' % (
+                    dict(spellings_counter)), None)
+                self.errors += 1
+
+    def test__check_variations_of_word_spellings(self):
+        self.get_text = lambda: (r'I has a cybercriminal. I had a cyber-criminal. '
+                                       r'or was it a CyberCriminal?')
+        self.perform_test(self.check_variations_of_word_spellings, 1)
+        self.get_text = lambda: (r'no strange words here, however put. '
+                                       r'However, is that true?')
+        self.perform_test(self.check_variations_of_word_spellings, 0)
+
+    ##########################################################################
+
     def check_commas_in_numbers(self):
         # We also check in tables
         text = self.get_text(ignored_environments=tuple(
@@ -275,7 +316,7 @@ class Paper(object):
     def check_always_capitalize(self):
 
         for reg in ["internet", "javascript"]:
-            for m in re.finditer(reg,
+            for m in re.finditer(r"\b{0}".format(reg),
                                  self.get_text(),
                                  re.MULTILINE):
                 self.print_issue("Always capitalize", m)
@@ -285,6 +326,8 @@ class Paper(object):
         self.get_text = lambda: r"internet"
         self.perform_test(self.check_always_capitalize, 1)
 
+        self.get_text = lambda: r"testinternet"
+        self.perform_test(self.check_always_capitalize, 0)
     ##########################################################################
 
     def check_comma_before_that(self):
@@ -349,7 +392,7 @@ class Paper(object):
         british_spellings = {"acknowledgement": "acknowledgment", "afterwards": "afterward", "arse": "ass", "backwards": "backward", "besides": "beside",
                              "cancelling": "canceling", "catalogue": "catalog", "centre": "center", "cheque": "check", "colour": "color", "dialogue": "dialog",
                              "favour": "favor", "flavour": "flavor", "forwards": "forward", "grey": "gray", "judgement": "judgment", "labour": "labor",
-                             "lustre": "luster", "modelled": "modeled", "revelled": "raveled", "shovelled": "shoveled", "snivelled": "sniveled", 
+                             "lustre": "luster", "modelled": "modeled", "revelled": "raveled", "shovelled": "shoveled", "snivelled": "sniveled",
                              "theatre": "theater", "towards": "toward", "travelling": "traveling", "yodelling": "yodeling"}
         for british, american in british_spellings.iteritems():
             for m in re.finditer("[^\w]+" + british + "[^\w]+", self.get_text()):
