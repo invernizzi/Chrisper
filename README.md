@@ -26,6 +26,12 @@ Usage
  
     chrisper *.tex
 
+Example
+-------
+An run of Chrisper on [this_tex_file](example_with_errors.tex) gives this output:
+
+![Alt text](example_with_errors.png)
+
 Contributing
 ------------
 
