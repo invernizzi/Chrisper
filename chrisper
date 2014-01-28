@@ -141,7 +141,6 @@ class Paper(object):
             text = self.get_latex_text()
             text = re.sub(r'\\cite{[^}]*}', '', text)
             text = re.sub(r'\\-', '', text)
-            print text
             # Run it through detex
             p = subprocess.Popen(["detex",
                                   "-n",
