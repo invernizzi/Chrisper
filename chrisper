@@ -385,6 +385,8 @@ class Paper(object):
         self.perform_test(self.check_word_before_ref_is_capitalized, 0)
         self.get_latex_text = lambda: "in section \\ref{sec}, see figure \\ref{fig}"
         self.perform_test(self.check_word_before_ref_is_capitalized, 2)
+        self.get_latex_text = lambda: "section \\ref{sec}"
+        self.perform_test(self.check_word_before_ref_is_capitalized, 1)
 
     ##########################################################################
 
