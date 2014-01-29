@@ -374,10 +374,10 @@ class Paper(object):
         for m in re.finditer('\\\\ref', text, re.MULTILINE):
             word_before_start = max(text.rfind(' ', 0, m.start() - 2),
                                     text.rfind('~', 0, m.start() - 2))
-            word_before = re.search("\w+", text[word_before_start + 1:
-                                                m.start() + 1]).group()
+            word_before = re.findall("\w+", text[word_before_start + 1:
+                                                m.start() + 1])[-1]
             if not word_before in ["and"] and not word_before[0].isupper():
-                self.print_issue(r'Capitalize the word before \ref', m)
+                self.print_issue(r'Capitalize the word before \ref', m, text)
                 self.errors += 1
 
     def test__check_word_before_ref_is_capitalized(self):
