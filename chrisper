@@ -8,7 +8,10 @@ import datetime
 import string
 from collections import defaultdict, Counter
 import nltk
-nltk.download('maxent_treebank_pos_tagger')
+try:
+    nltk.pos_tag('Just trying to see if the NLTK dataset is installed')
+except LookupError:
+    nltk.download('maxent_treebank_pos_tagger')
 
 try:
     from clint.textui import colored
