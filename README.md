@@ -9,10 +9,14 @@ The reference that we follow is [Bugs in Writing](http://www.amazon.com/BUGS-Wri
 Install
 -------
 
-The only dependency is "detex", which you can install
+The only dependencies are "detex", which you can install
 on a Debian derivative system with:
 
-     sudo apt-get install texlive-extra-utils
+    sudo apt-get install texlive-extra-utils
+
+and "nltk", which you can install with:
+
+    sudo pip install nltk
 
 If you want to be fancy and have the (optional) colored output,
 
