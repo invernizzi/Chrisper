@@ -275,6 +275,12 @@ class Paper(object):
                 if normalized_word in STOPWORDS + PREPOSITIONS + CONJUNCTIONS:
                     # Ignore common words
                     continue
+                # Ignore numbers
+                try:
+                    float(normalized_word)
+                    continue
+                except ValueError:
+                    pass
                 self.print_issue('This word has multiple spellings: %s' % (
                     dict(spellings_counter)), None)
                 self.errors += 1
@@ -287,6 +293,8 @@ class Paper(object):
                                        r'However, is that true?')
         self.perform_test(self.check_variations_of_word_spellings, 0)
         self.get_text = lambda: (r'It matters the it factor ')
+        self.perform_test(self.check_variations_of_word_spellings, 0)
+        self.get_text = lambda: (r'1.6 16 and other fancy numbers.')
         self.perform_test(self.check_variations_of_word_spellings, 0)
 
     ##########################################################################
