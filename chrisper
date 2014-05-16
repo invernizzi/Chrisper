@@ -471,6 +471,22 @@ class Paper(object):
 
     ##########################################################################
 
+    def check_slang_and_gergal_terms(self):
+        gergal = ['basically']
+        for w in gergal:
+            for m in re.finditer(w, self.get_text(),
+                                 re.IGNORECASE):
+                self.print_issue(
+                    "This word doesn't sound like it should be in a paper: "
+                    + w, m)
+                self.errors += 1
+
+    def test__check_slang_and_gergal_terms(self):
+        self.get_text = lambda: r"Basically, this is wat we do"
+        self.perform_test(self.check_slang_and_gergal_terms, 1)
+
+    ##########################################################################
+
     def check_misplelled_standard_phrases(self):
         mispellings = {"in more details": "in more detail"}
         for wrong, right in mispellings.iteritems():
