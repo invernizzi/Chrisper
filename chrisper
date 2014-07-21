@@ -167,6 +167,7 @@ class Paper(object):
             text = re.sub(r'\\-', '', text)
             # Run it through detex
             p = subprocess.Popen(["detex",
+                                  "-l",
                                   "-n",
                                   "-e",
                                   ','.join(ignored_environments)],
