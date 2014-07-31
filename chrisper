@@ -171,6 +171,7 @@ class Paper(object):
             text = re.sub(r'\\-', '', text)
             # Run it through detex
             p = subprocess.Popen(["detex",
+                                  "-l",
                                   "-n",
                                   "-e",
                                   ','.join(ignored_environments)],
@@ -531,6 +532,23 @@ class Paper(object):
         self.get_text = lambda: r"Don't do this. I won't, tell anybody."
         self.perform_test(self.check_banned_words, 1)
 
+    ##########################################################################
+
+    def check_repeated_words(self):
+        for m in re.finditer(r"\b(\w+)\W+\1\b",
+                             self.get_text(), flags=re.IGNORECASE):
+            self.print_issue("Repeated word '%s'" % m.group(1), m)
+            self.errors += 1
+
+    def test__check_repeated_words(self):
+        self.get_text = lambda: r"We use this this and that."
+        self.perform_test(self.check_repeated_words, 1)
+        self.get_text = lambda: r"We use this and that, and this and that too."
+        self.perform_test(self.check_repeated_words, 0)
+        self.get_text = lambda: r"This. This is a sentence Sentence."
+        self.perform_test(self.check_repeated_words, 2)
+
+    
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
