@@ -12,6 +12,10 @@ try:
     nltk.pos_tag('Just trying to see if the NLTK dataset is installed')
 except LookupError:
     nltk.download('maxent_treebank_pos_tagger')
+try:
+    nltk.word_tokenize('test')
+except LookupError:
+    nltk.download('punkt')
 
 try:
     from clint.textui import colored
@@ -448,7 +452,7 @@ class Paper(object):
     ##########################################################################
 
     def check_british_spelling(self):
-        british_spellings = {"acknowledgement": "acknowledgment", "afterwards": "afterward", "arse": "ass", "backwards": "backward", "besides": "beside",
+        british_spellings = {"acknowledgement": "acknowledgment", "afterwards": "afterward", "arse": "ass", "backwards": "backward",
                              "cancelling": "canceling", "catalogue": "catalog", "centre": "center", "cheque": "check", "colour": "color", "dialogue": "dialog",
                              "favour": "favor", "flavour": "flavor", "forwards": "forward", "grey": "gray", "judgement": "judgment", "labour": "labor",
                              "lustre": "luster", "modelled": "modeled", "revelled": "raveled", "shovelled": "shoveled", "snivelled": "sniveled",
@@ -504,6 +508,7 @@ class Paper(object):
     def check_banned_words(self):
         banned_words = ["is[\s]+comprised[\s]+of",
                         "doesn't",
+                        "beside",
                         "won't",
                         "can't"]
         for banned_word in banned_words:
