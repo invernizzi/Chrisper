@@ -537,6 +537,8 @@ class Paper(object):
     def check_repeated_words(self):
         for m in re.finditer(r"\b(\w+)\W+\1\b",
                              self.get_text(), flags=re.IGNORECASE):
+            if m.groups(1)[0].isdigit():
+                continue
             self.print_issue("Repeated word '%s'" % m.group(1), m)
             self.errors += 1
 
@@ -547,8 +549,10 @@ class Paper(object):
         self.perform_test(self.check_repeated_words, 0)
         self.get_text = lambda: r"This. This is a sentence Sentence."
         self.perform_test(self.check_repeated_words, 2)
+        self.get_text = lambda: r"Version 4.4."
+        self.perform_test(self.check_repeated_words, 0)
 
-    
+
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
