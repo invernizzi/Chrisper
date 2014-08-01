@@ -247,9 +247,11 @@ class Paper(object):
 
     def check_citing_with_unbreakeable_spaces(self):
         for keyword in ["cite", "ref"]:
-            for m in re.finditer(r'(^|\s)\\' + keyword + r'\s*{',
+            for m in re.finditer(r'(\W?)(^|\s)+\\' + keyword + r'\s*{',
                                  self.get_latex_text(),
                                  re.MULTILINE):
+                if m.group(1) in [',', '&']:
+                    continue
                 self.print_issue('use hello~\%s{ instead of hello \%s{' % (keyword,
                                                                  keyword),
                                 m, self.get_latex_text())
@@ -260,6 +262,10 @@ class Paper(object):
         self.perform_test(self.check_citing_with_unbreakeable_spaces, 1)
         self.get_latex_text = lambda: r'refs done wrong \ref{ciao} - right~\ref{ciao}'
         self.perform_test(self.check_citing_with_unbreakeable_spaces, 1)
+        self.get_latex_text = lambda: r'hello& \cite{ciao}'
+        self.perform_test(self.check_citing_with_unbreakeable_spaces, 0)
+        self.get_latex_text = lambda: r', \ref{ciao}'
+        self.perform_test(self.check_citing_with_unbreakeable_spaces, 0)
 
     ##########################################################################
 
@@ -372,62 +378,62 @@ class Paper(object):
         self.get_text = lambda: r"testinternet"
         self.perform_test(self.check_always_capitalize, 0)
     ##########################################################################
-
-    def check_comma_before_that(self):
-        for m in re.finditer(",\s+that",
-                             self.get_text(),
-                             re.MULTILINE):
-            phrase_start = max([
-                self.get_text().rfind(c, 0, m.start())
-                for c in ['\n', '.', ':', ';']
-            ] + [0])
-            phrase = self.get_text()[phrase_start:m.start() + 1]
-            if len([c for c in phrase if c == ',']) % 2 == 0:
-                # An even number of commas found, skipping
-                continue
-            self.print_issue("Do not put a comma before 'that'", m)
-            self.errors += 1
-
-    def test__check_comma_before_that(self):
-        self.get_text = lambda: r"I like cats, that eat mice"
-        self.perform_test(self.check_comma_before_that, 1)
-        self.get_text = lambda: r"I like cats that eat mice"
-        self.perform_test(self.check_comma_before_that, 0)
-
-    ##########################################################################
-
-    def check_comma_before_which(self):
-        for m in re.finditer("[^,'*\s]\s+which",
-                             self.get_text(),
-                             re.MULTILINE):
-            word_before_start = self.get_text().rfind(' ', 0, m.start())
-            word_before = re.search("\w+", self.get_text()[
-                                                word_before_start + 1:
-                                                m.start() + 1]).group()
-            if word_before in PREPOSITIONS + CONJUNCTIONS:
-                continue
-            if word_before.endswith('ing') or word_before.endswith('ly'):
-                continue
-            # More expensive analysis: is the word before a verb?
-            phrase_start = max([
-                self.get_text().rfind(c, 0, m.start())
-                for c in ['\n', '.', ':', ';']
-            ] + [0])
-            phrase = self.get_text()[phrase_start:m.start() + 1]
-            word_before_kind = filter(lambda x: x[0] == word_before, nltk.pos_tag(
-                                                  nltk.word_tokenize(phrase)))[0][1]
-            if word_before_kind.startswith('VB'):
-                continue
-            self.print_issue("Put a comma before 'which'", m)
-            self.errors += 1
-
-    def test__check_comma_before_which(self):
-        self.get_text = lambda: r"I like that cat, which eat mice"
-        self.perform_test(self.check_comma_before_which, 0)
-        self.get_text = lambda: r"I like that cat which eat mice"
-        self.perform_test(self.check_comma_before_which, 1)
-        self.get_text = lambda: r"I know which cat eat mice"
-        self.perform_test(self.check_comma_before_which, 0)
+    #
+    # def check_comma_before_that(self):
+    #     for m in re.finditer(",\s+that",
+    #                          self.get_text(),
+    #                          re.MULTILINE):
+    #         phrase_start = max([
+    #             self.get_text().rfind(c, 0, m.start())
+    #             for c in ['\n', '.', ':', ';']
+    #         ] + [0])
+    #         phrase = self.get_text()[phrase_start:m.start() + 1]
+    #         if len([c for c in phrase if c == ',']) % 2 == 0:
+    #             # An even number of commas found, skipping
+    #             continue
+    #         self.print_issue("Do not put a comma before 'that'", m)
+    #         self.errors += 1
+    #
+    # def test__check_comma_before_that(self):
+    #     self.get_text = lambda: r"I like cats, that eat mice"
+    #     self.perform_test(self.check_comma_before_that, 1)
+    #     self.get_text = lambda: r"I like cats that eat mice"
+    #     self.perform_test(self.check_comma_before_that, 0)
+    #
+    # ##########################################################################
+    #
+    # def check_comma_before_which(self):
+    #     for m in re.finditer("[^,'*\s]\s+which",
+    #                          self.get_text(),
+    #                          re.MULTILINE):
+    #         word_before_start = self.get_text().rfind(' ', 0, m.start())
+    #         word_before = re.search("\w+", self.get_text()[
+    #                                             word_before_start + 1:
+    #                                             m.start() + 1]).group()
+    #         if word_before in PREPOSITIONS + CONJUNCTIONS:
+    #             continue
+    #         if word_before.endswith('ing') or word_before.endswith('ly'):
+    #             continue
+    #         # More expensive analysis: is the word before a verb?
+    #         phrase_start = max([
+    #             self.get_text().rfind(c, 0, m.start())
+    #             for c in ['\n', '.', ':', ';']
+    #         ] + [0])
+    #         phrase = self.get_text()[phrase_start:m.start() + 1]
+    #         word_before_kind = filter(lambda x: x[0] == word_before, nltk.pos_tag(
+    #                                               nltk.word_tokenize(phrase)))[0][1]
+    #         if word_before_kind.startswith('VB'):
+    #             continue
+    #         self.print_issue("Put a comma before 'which'", m)
+    #         self.errors += 1
+    #
+    # def test__check_comma_before_which(self):
+    #     self.get_text = lambda: r"I like that cat, which eat mice"
+    #     self.perform_test(self.check_comma_before_which, 0)
+    #     self.get_text = lambda: r"I like that cat which eat mice"
+    #     self.perform_test(self.check_comma_before_which, 1)
+    #     self.get_text = lambda: r"I know which cat eat mice"
+    #     self.perform_test(self.check_comma_before_which, 0)
 
     ##########################################################################
 
@@ -537,7 +543,7 @@ class Paper(object):
     def check_repeated_words(self):
         for m in re.finditer(r"\b(\w+)\W+\1\b",
                              self.get_text(), flags=re.IGNORECASE):
-            if m.groups(1)[0].isdigit():
+            if m.group(1).isdigit():
                 continue
             self.print_issue("Repeated word '%s'" % m.group(1), m)
             self.errors += 1
