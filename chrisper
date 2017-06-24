@@ -25,7 +25,7 @@ except:
             return lambda x: x
 
     colored = Passthrough()
-    print "=== For colored output, install clint (via 'sudo pip install clint') ==="
+    print("=== For colored output, install clint (via 'sudo pip install clint') ===")
 
 PREPOSITIONS = ["a", "abaft", "aboard", "about", "above", "absent",
     "across", "afore", "after", "against", "along", "alongside", "amid",
@@ -105,7 +105,7 @@ class Paper(object):
             self.__clear_caches()
 
             # Call all functions
-            for name in filter(lambda n: n.startswith(prefix), dir(self)):
+            for name in [n for n in dir(self) if n.startswith(prefix)]:
                 attribute = getattr(self, name)
                 if inspect.ismethod(attribute):
                         attribute()
@@ -119,7 +119,7 @@ class Paper(object):
 
     def _format_re_match(self, m, text):
         start_of_sentence = max(text.rfind('\n', 0, m.start()) + 1, 0)
-        end_of_sentence = text.find('\n', m.end()), len(text)
+        end_of_sentence = text.find('\n', m.end())
         if end_of_sentence == -1:
             end_of_sentence = len(text)
         a_string_start = max(start_of_sentence, m.start() - 10)
@@ -177,9 +177,9 @@ class Paper(object):
                                   ','.join(ignored_environments)],
                                  stdin=subprocess.PIPE,
                                  stdout=subprocess.PIPE)
-            p.stdin.write(text)
-            text = p.communicate()[0]
-            p.stdin.close()
+            text, _ = p.communicate(input=text.encode('utf-8'))
+            text = text.decode('utf-8')
+
             self.__text[ignored_environments] = self.__flatten_paragraphs(
                 text)
             return self.__text[ignored_environments]
@@ -198,9 +198,9 @@ class Paper(object):
             example = self._format_re_match(match, text)
         else:
             example = ''
-        print "%30s - %s: %s" % (colored.green(self.filename),
+        print(("%30s - %s: %s" % (colored.green(self.filename),
                                  colored.red(message),
-                                 example)
+                                 example)))
 
     ##########################################################################
     # CHECKS
@@ -274,7 +274,7 @@ class Paper(object):
         for word in re.findall(r'\b\S+\b', self.get_text(), re.MULTILINE):
             word_alphanum = re.sub("[^a-zA-Z0-9_']+", '', word).lower()
             words[word_alphanum].update([word])
-        for _, spellings_counter in words.iteritems():
+        for _, spellings_counter in words.items():
             variations = len(spellings_counter.keys())
             total_appereances = sum(spellings_counter.values())
             if variations > 1:
@@ -282,7 +282,7 @@ class Paper(object):
                     # FIXME: for now, if it's just a case mismatch on the first
                     # letter, skip
                     continue
-                normalized_word = spellings_counter.keys()[0].lower()
+                normalized_word = list(spellings_counter.keys())[0].lower()
                 if normalized_word in STOPWORDS + PREPOSITIONS + CONJUNCTIONS:
                     # Ignore common words
                     continue
@@ -321,7 +321,7 @@ class Paper(object):
                 number = int(text[m.start():m.end()])
             except:
                 number = 0
-            if number not in range(1990, datetime.date.today().year + 2):
+            if number not in list(range(1990, datetime.date.today().year + 2)):
                 self.errors += 1
                 self.print_issue('Put commas in numbers over 1,000', m)
 
@@ -464,7 +464,7 @@ class Paper(object):
                              "favour": "favor", "flavour": "flavor", "forwards": "forward", "grey": "gray", "judgement": "judgment", "labour": "labor",
                              "lustre": "luster", "modelled": "modeled", "revelled": "raveled", "shovelled": "shoveled", "snivelled": "sniveled",
                              "theatre": "theater", "towards": "toward", "travelling": "traveling", "yodelling": "yodeling"}
-        for british, american in british_spellings.iteritems():
+        for british, american in british_spellings.items():
             for m in re.finditer("[^\w]+" + british + "[^\w]+", self.get_text()):
                 self.print_issue("Don't spell like a bugger (that's british english) -" \
                     " it's ' "+ american + " ' , not", m)
@@ -500,7 +500,7 @@ class Paper(object):
 
     def check_misplelled_standard_phrases(self):
         mispellings = {"in more details": "in more detail"}
-        for wrong, right in mispellings.iteritems():
+        for wrong, right in mispellings.items():
             for m in re.finditer("[^\w]+" + wrong + "[^\w]+", self.get_text()):
                 self.print_issue("Mispelled standard phrase - ' %s ' "
                         "should be ' %s' in" % (wrong, right), m)
@@ -562,23 +562,23 @@ class Paper(object):
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
-        print """Usage:
+        print("""Usage:
  - chrisper *.tex
 
  - chrisper test
       Runs the test suite.
-        """
+        """)
         sys.exit(0)
 
     if sys.argv[1] == "test":
         Paper(sys.argv[2:])._run_all_tests()
-        print colored.green("\n=== ALL TESTS PASSED ===")
+        print((colored.green("\n=== ALL TESTS PASSED ===")))
     else:
         paper = Paper(sys.argv[1:])
         paper._run_all_checks()
         if paper.errors == 0:
-            print colored.green('=== IT LOOKS GOOD TO ME. CONGRATS! ===')
+            print((colored.green('=== IT LOOKS GOOD TO ME. CONGRATS! ===')))
         else:
-            print colored.yellow("\n=== I'VE FOUND %d ISSUES ===" %
-                    paper.errors)
+            print((colored.yellow("\n=== I'VE FOUND %d ISSUES ===" %
+                    paper.errors)))
             sys.exit(1)
