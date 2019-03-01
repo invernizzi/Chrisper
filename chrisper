@@ -466,7 +466,7 @@ class Paper(object):
                              "theatre": "theater", "towards": "toward", "travelling": "traveling", "yodelling": "yodeling"}
         for british, american in british_spellings.items():
             for m in re.finditer("[^\w]+" + british + "[^\w]+", self.get_text()):
-                self.print_issue("Don't spell like a bugger (that's british english) -" \
+                self.print_issue("That's british english -" \
                     " it's ' "+ american + " ' , not", m)
                 self.errors += 1
 
