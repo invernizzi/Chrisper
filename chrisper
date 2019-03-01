@@ -142,7 +142,11 @@ class Paper(object):
         else:
             with open(self.filename) as f:
                 text = f.read()
-            self.__latex_text = self.__flatten_paragraphs(text)
+            no_comments = ""
+            for line in text.split("\n"):
+                if not line.startswith("%"):
+                    no_comments = no_comments + line + "\n"
+            self.__latex_text = self.__flatten_paragraphs(no_comments)
             return self.__latex_text
 
     _IGNORED_ENVIRONMENTS = ("array",
